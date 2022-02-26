@@ -152,8 +152,6 @@ function TOOL:LeftClick(tTrace)
 			if IsValid(v) and not self.SelectedEntities[v] and f_GetOwner(tTrace.Entity) == ePly then
 				self:SelectEntity(v)
 
-				print(v)
-
 				iSelected = iSelected + 1
 			end
 
