@@ -130,7 +130,7 @@ function TOOL:RightClick(tTrace)
 	if iCount ~= 1 then
 		eOwner:PrintMessage(HUD_PRINTTALK,"Multi-Parent: " .. iCount .. " entities were unparented.")
 	else
-		ePly:PrintMessage(HUD_PRINTTALK,"Multi-Parent: One entity was unparented.")
+		eOwner:PrintMessage(HUD_PRINTTALK,"Multi-Parent: One entity was unparented.")
 	end
 
 
