@@ -458,7 +458,7 @@ if SERVER then
 	t_MetaEntity.Old_MMM_SetParent = t_MetaEntity.Old_MMM_SetParent or t_MetaEntity.SetParent
 
 
-	function t_MetaEntity:SetParent(eTarget)
+	function t_MetaEntity:SetParent(eTarget,iAttachment)
 		eTarget = eTarget or NULL
 
 
@@ -474,6 +474,6 @@ if SERVER then
 		end
 
 
-		self:Old_MMM_SetParent(eTarget)
+		self:Old_MMM_SetParent(eTarget,iAttachment)
 	end
 end
