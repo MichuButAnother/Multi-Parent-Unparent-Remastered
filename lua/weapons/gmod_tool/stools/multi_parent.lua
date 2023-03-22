@@ -58,18 +58,20 @@ local f_GetOwner = function(eEnt)
 end
 
 
-local tBlacklist = { -- Blacklist of classes that cannot be parented (You can parent to these but they cannot be a child)
+local tBlacklist = { -- Blacklist of classes that cannot be parented (You can parent to these but they cannot be a child) -- Only the STool prevents these from becoming a child.
 	["player"] = true,
 	["prop_vehicle_jeep"] = true,
 	["prop_vehicle_airboat"] = true,
 	["prop_vehicle_jeep_old"] = true
 }
 
+--[[
 local tBlacklistNever = { -- Blacklist of classes that cannot be parented or receive children
 	["prop_vehicle_jeep"] = true,
 	["prop_vehicle_airboat"] = true,
 	["prop_vehicle_jeep_old"] = true
 }
+]]
 
 local tBlacklistCrashFix = { -- Blacklist of classes that cannot be parented together
 	["prop_vehicle_jeep"] = true,
@@ -469,10 +471,11 @@ if SERVER then
 			return
 		end
 
+		--[[
 		if (tBlacklistNever[sOurClass] or tBlacklistNever[sTheirClass]) then -- These classes may not be parented at all!
 			return
 		end
-
+		]]
 
 		self:Old_MMM_SetParent(eTarget,iAttachment)
 	end
