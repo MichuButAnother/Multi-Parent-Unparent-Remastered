@@ -11,14 +11,12 @@ if CLIENT then
 	language.Add("tool.multi_unparent.right","Secondary: Unparent all selected entities")
 	language.Add("tool.multi_unparent.reload","Reload: Clear selected entities")
 
-
 	MMM__TOOL__PARENT__UNPARENT__INIT = function() -- We have to do something really stupid here because of how tools function..
 		tUniqueToPlayer[LocalPlayer()] = {
 			SelectedEntities = {},
 			SelectedCount = 0,
 			OldEntityColors = {}
 		}
-
 	end
 end
 
@@ -34,189 +32,137 @@ TOOL.Information = {
 	}
 }
 
-
 function TOOL:Deploy() -- Sometimes is called on client, sometimes is not. To fix this unreliable mess we simply do some hacky stuff!
-	local eOwner = self:GetOwner()
+	local owner = self:GetOwner()
 
-	tUniqueToPlayer[eOwner] = {
+	tUniqueToPlayer[owner] = {
 		SelectedEntities = {},
 		SelectedCount = 0,
 		OldEntityColors = {}
 	}
 
-
 	if SERVER then
-		eOwner:SendLua("MMM__TOOL__PARENT__UNPARENT__INIT()") -- Yes. Really.
+		owner:SendLua("MMM__TOOL__PARENT__UNPARENT__INIT()") -- Yes. Really.
 	end
 end
 
 function TOOL:Holster()
-	self:Reload() -- Reset!
+	self:Reload()
 
 	return true
 end
 
-
-function TOOL:LeftClick(tTrace)
-	if not IsValid(tTrace.Entity) or tTrace.Entity:IsPlayer() or tTrace.Entity:IsWorld() then return false end
-
+function TOOL:LeftClick(trace)
+	local ent = trace.Entity
+	if not IsValid(ent) or ent:IsPlayer() or ent:IsWorld() then return false end
 
 	if CLIENT then
-		local eOwner = self:GetOwner()
-
+		local owner = self:GetOwner()
 
 		net.Start(sTag)
-			net.WriteEntity(eOwner:GetEyeTrace().Entity)
+			net.WriteEntity(owner:GetEyeTrace().Entity)
 		net.SendToServer()
 
-
-		if not tUniqueToPlayer[eOwner].SelectedEntities[tTrace.Entity] then
-			tUniqueToPlayer[self:GetOwner()].SelectedEntities[tTrace.Entity] = true
+		if not tUniqueToPlayer[owner].SelectedEntities[ent] then
+			tUniqueToPlayer[self:GetOwner()].SelectedEntities[ent] = true
 		else
-			tUniqueToPlayer[self:GetOwner()].SelectedEntities[tTrace.Entity] = nil
+			tUniqueToPlayer[self:GetOwner()].SelectedEntities[ent] = nil
 		end
-
 
 		return true
 	end
 
-
 	return true
 end
-
 
 function TOOL:RightClick(tTrace)
 	if CLIENT then return true end
 
+	local owner = self:GetOwner()
 
-	local eOwner = self:GetOwner()
+	if tUniqueToPlayer[owner].SelectedCount <= 0 then return false end
 
-	if tUniqueToPlayer[eOwner].SelectedCount <= 0 then return false end
+	local count = 0
 
+	for ent in pairs(tUniqueToPlayer[owner].SelectedEntities) do -- Unparent!
+		if not IsValid(ent) then continue end
 
-	--[[ -- We don't do this for now as this could potentially break a lot of stuff and be used as an exploit!
-	for Key in pairs(tUniqueToPlayer[eOwner].SelectedEntities) do -- Add Children to the selected entity table
-		if not IsValid(Key) then goto cont end
+		ent:SetParent()
 
-
-		for _,v in ipairs(Key:GetChildren()) do
-			tUniqueToPlayer[eOwner].SelectedEntities[v] = true
-		end
-
-
-		::cont::
-	end
-	]]
-
-
-	local iCount = 0
-
-	for Key in pairs(tUniqueToPlayer[eOwner].SelectedEntities) do -- Unparent!
-		if not IsValid(Key) then goto cont end
-
-
-		Key:SetParent()
-
-		iCount = iCount + 1
-
-
-		::cont::
+		count = count + 1
 	end
 
+	self:Reload()
 
-	self:Reload() -- Lazy reset
-
-
-	if iCount ~= 1 then
-		eOwner:PrintMessage(HUD_PRINTTALK,"Multi-Parent: " .. iCount .. " entities were unparented.")
+	if count ~= 1 then
+		owner:PrintMessage(HUD_PRINTTALK,"Multi-Parent: " .. count .. " entities were unparented.")
 	else
-		eOwner:PrintMessage(HUD_PRINTTALK,"Multi-Parent: One entity was unparented.")
+		owner:PrintMessage(HUD_PRINTTALK,"Multi-Parent: One entity was unparented.")
 	end
-
 
 	return true
 end
-
 
 function TOOL:Reload()
 	if CLIENT then return true end
 
+	local owner = self:GetOwner()
 
-	local eOwner = self:GetOwner()
+	if tUniqueToPlayer[owner].SelectedCount <= 0 then return end
 
-	if tUniqueToPlayer[eOwner].SelectedCount <= 0 then return end
+	for Key in pairs(tUniqueToPlayer[owner].SelectedEntities) do
+		if not IsValid(Key) then continue end
 
-	for Key in pairs(tUniqueToPlayer[eOwner].SelectedEntities) do
-		if not IsValid(Key) then goto cont end
-
-
-		Key:SetColor(tUniqueToPlayer[eOwner].OldEntityColors[Key])
-
-
-		::cont::
+		Key:SetColor(tUniqueToPlayer[owner].OldEntityColors[Key])
 	end
 
-
-	tUniqueToPlayer[eOwner].SelectedCount = 0
-	tUniqueToPlayer[eOwner].SelectedEntities = {}
-	tUniqueToPlayer[eOwner].OldEntityColors = {}
+	tUniqueToPlayer[owner].SelectedCount = 0
+	tUniqueToPlayer[owner].SelectedEntities = {}
+	tUniqueToPlayer[owner].OldEntityColors = {}
 
 	return true
 end
 
+if SERVER then
+	util.AddNetworkString(sTag)
 
--- ----- ----- ----- ----- ----- ----- ----- ----- ----- --
+	local t_MetaEntity = FindMetaTable("Entity")
 
-if CLIENT then return end
+	local f_GetOwner = function(ent)
+		if t_MetaEntity.CPPIGetOwner then -- CPPI - ( FPP / SPP / MMM / sv_props / gProctect (lul) / And many more that I'm not going to list. IT'S THE STANDARD FFS. )
+			return ent:CPPIGetOwner()
+		end
 
-
-local t_MetaEntity = FindMetaTable("Entity")
-
-local f_GetOwner = function(eEnt)
-	if t_MetaEntity.CPPIGetOwner then -- CPPI - ( FPP / SPP / MMM / sv_props / gProctect (lul) / And many more that I'm not going to list. IT'S THE STANDARD FFS. )
-		return eEnt:CPPIGetOwner()
+		return ent:GetOwner() -- Used by some other things such as wiremod, HL2 related stuff, etc.. Not very reliable but w/e
 	end
 
-	return eEnt:GetOwner() -- Used by some other things such as wiremod, HL2 related stuff, etc.. Not very reliable but w/e
+	net.Receive(sTag, function(_,ePly)
+		local ent = net.ReadEntity()
+
+		if not IsValid(ent) or ent:IsPlayer() or ent:IsWorld() or not f_GetOwner(ent) then return end -- Never trust the client, yo! ( AND This bypasses protection checks! )
+
+		if tUniqueToPlayer[ePly].SelectedEntities[ent] then -- Deselect
+			if not tUniqueToPlayer[ePly].SelectedEntities[ent] then return end
+
+			ent:SetColor(tUniqueToPlayer[ePly].OldEntityColors[ent])
+
+			tUniqueToPlayer[ePly].SelectedCount = tUniqueToPlayer[ePly].SelectedCount - 1
+
+			tUniqueToPlayer[ePly].OldEntityColors[ent] = nil
+			tUniqueToPlayer[ePly].SelectedEntities[ent] = nil
+
+			return
+		end
+
+		tUniqueToPlayer[ePly].SelectedEntities[ent] = true
+
+		tUniqueToPlayer[ePly].SelectedCount = tUniqueToPlayer[ePly].SelectedCount + 1
+
+		local cOldColor = ent:GetColor()
+
+		tUniqueToPlayer[ePly].OldEntityColors[ent] = cOldColor
+
+		ent:SetColor(Color(255,0,0,100))
+		ent:SetRenderMode(RENDERMODE_TRANSALPHA)
+	end)
 end
-
-
-util.AddNetworkString(sTag)
-
-net.Receive(sTag,function(_,ePly)
-	local eEnt = net.ReadEntity()
-
-	if not IsValid(eEnt) or eEnt:IsPlayer() or eEnt:IsWorld() or not f_GetOwner(eEnt) then return end -- Never trust the client, yo! ( AND This bypasses protection checks! )
-
-	if tUniqueToPlayer[ePly].SelectedEntities[eEnt] then -- Deselect
-		if not tUniqueToPlayer[ePly].SelectedEntities[eEnt] then return end
-
-
-		eEnt:SetColor(tUniqueToPlayer[ePly].OldEntityColors[eEnt])
-
-
-		tUniqueToPlayer[ePly].SelectedCount = tUniqueToPlayer[ePly].SelectedCount - 1
-
-
-		tUniqueToPlayer[ePly].OldEntityColors[eEnt] = nil
-		tUniqueToPlayer[ePly].SelectedEntities[eEnt] = nil
-
-		return
-	end
-
-
-	tUniqueToPlayer[ePly].SelectedEntities[eEnt] = true
-
-	tUniqueToPlayer[ePly].SelectedCount = tUniqueToPlayer[ePly].SelectedCount + 1
-
-
-	local cOldColor = eEnt:GetColor()
-
-	tUniqueToPlayer[ePly].OldEntityColors[eEnt] = cOldColor
-
-	eEnt:SetColor(Color(255,0,0,100))
-	eEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
-end)
-
-
--- ----- ----- ----- ----- ----- ----- ----- ----- ----- --
