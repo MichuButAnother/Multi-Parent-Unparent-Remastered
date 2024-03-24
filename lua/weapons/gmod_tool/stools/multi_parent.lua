@@ -47,45 +47,47 @@ TOOL.OldEntityColors = {}
 
 local entMeta = FindMetaTable("Entity")
 
-local f_GetOwner = function(eEnt)
-	if entMeta.CPPIGetOwner then -- CPPI - ( FPP / SPP / MMM / sv_props / gProctect (lul) / And many more that I'm not going to list. IT'S THE STANDARD FFS. )
-		return eEnt:CPPIGetOwner()
+local getOwner = function(ent)
+	-- CPPI is a standard at this point, most (if not all) prop protection addons support it by now
+	if entMeta.CPPIGetOwner then
+		return ent:CPPIGetOwner()
 	end
 
-	return eEnt:GetOwner() -- Used by some other things such as wiremod, HL2 related stuff, etc.. Not very reliable but w/e
+	-- Used by some other things such as wiremod, HL2 related stuff, etc.. Not very reliable but w/e
+	return ent:GetOwner()
 end
 
-local selection_blacklist = { -- Classes to filter with the auto selection
+local selection_blacklist = {
 	["player"] = true,
-	["predicted_viewmodel"] = true, -- Some of these may not be needed, whatever.
+	["predicted_viewmodel"] = true, -- Some of these may not be needed, whatever. (idk what does this mean but whatever, i'll just let it sit here)
 	["gmod_tool"] = true,
 	["none"] = true
 }
 
-function TOOL:SelectEntity(eEnt)
-	if self.SelectedEntities[eEnt] then return end
+function TOOL:SelectEntity(ent)
+	if self.SelectedEntities[ent] then return end
 
-	self.SelectedEntities[eEnt] = true
+	self.SelectedEntities[ent] = true
 
 	self.SelectedCount = self.SelectedCount + 1
 
-	local cOldColor = eEnt:GetColor()
+	local cOldColor = ent:GetColor()
 
-	self.OldEntityColors[eEnt] = cOldColor
+	self.OldEntityColors[ent] = cOldColor
 
-	eEnt:SetColor(Color(0,255,0,100))
-	eEnt:SetRenderMode(RENDERMODE_TRANSALPHA)
+	ent:SetColor(Color(0,255,0,100))
+	ent:SetRenderMode(RENDERMODE_TRANSALPHA)
 end
 
-function TOOL:DeselectEntity(eEnt)
-	if not self.SelectedEntities[eEnt] then return end
+function TOOL:DeselectEntity(ent)
+	if not self.SelectedEntities[ent] then return end
 
-	eEnt:SetColor(self.OldEntityColors[eEnt])
+	ent:SetColor(self.OldEntityColors[ent])
 
 	self.SelectedCount = self.SelectedCount - 1
 
-	self.OldEntityColors[eEnt] = nil
-	self.SelectedEntities[eEnt] = nil
+	self.OldEntityColors[ent] = nil
+	self.SelectedEntities[ent] = nil
 end
 
 function TOOL:LeftClick(trace)
@@ -99,8 +101,8 @@ function TOOL:LeftClick(trace)
 	if not ply:KeyDown(IN_USE) and ent:IsWorld() then return false end
 
 	if ply:KeyDown(IN_USE) then
-		local iRadius = math.Clamp(self:GetClientNumber("radius"),64,1024)
-		local iSelected = 0
+		local radius = math.Clamp(self:GetClientNumber("radius"), 64, 1024)
+		local selected = 0
 
 		local tFilter = {}
 
@@ -110,32 +112,32 @@ function TOOL:LeftClick(trace)
 			end
 		end
 
-		for _, v in ipairs(ents.FindInSphere(trace.HitPos, iRadius)) do
+		for _, v in ipairs(ents.FindInSphere(trace.HitPos, radius)) do
 			if IsValid(v) and tFilter[v] then continue end
 
-			if IsValid(v) and not self.SelectedEntities[v] and f_GetOwner(ent) == ply then
+			if IsValid(v) and not self.SelectedEntities[v] and getOwner(ent) == ply then
 				self:SelectEntity(v)
 
-				iSelected = iSelected + 1
+				selected = selected + 1
 			end
 		end
 
-		if iSelected ~= 1 then
-			ply:PrintMessage(HUD_PRINTTALK,"Multi-Parent: " .. iSelected .. " entities were selected.")
+		if selected ~= 1 then
+			ply:PrintMessage(HUD_PRINTTALK,"Multi-Parent: " .. selected .. " entities were selected.")
 		else
 			ply:PrintMessage(HUD_PRINTTALK,"Multi-Parent: One entity was selected.")
 		end
 	elseif ply:KeyDown(IN_SPEED) then
-		local iSelected = 0
+		local selected = 0
 
 		for _,v in pairs(constraint.GetAllConstrainedEntities(ent)) do
 			self:SelectEntity(v)
 
-			iSelected = iSelected + 1
+			selected = selected + 1
 		end
 
-		if iSelected ~= 1 then
-			ply:PrintMessage(HUD_PRINTTALK,"Multi-Parent: " .. iSelected .. " entities were selected.")
+		if selected ~= 1 then
+			ply:PrintMessage(HUD_PRINTTALK,"Multi-Parent: " .. selected .. " entities were selected.")
 		else
 			ply:PrintMessage(HUD_PRINTTALK,"Multi-Parent: One entity was selected.")
 		end
@@ -222,9 +224,9 @@ function TOOL:RightClick(trace)
 				ent2:SetColor(v)
 				ent2:SetParent(ent)
 
-				self.SelectedEntities[Key] = nil
+				self.SelectedEntities[ent2] = nil
 
-				tUndo[Key] = tData
+				tUndo[ent2] = tData
 			end
 		else
 			if IsValid(ent2) then
