@@ -8,6 +8,18 @@ if CLIENT then
 	language.Add("tool.multi_parent.right","Secondary: Parent all selected entities to the entity")
 	language.Add("tool.multi_parent.reload","Reload: Clear selected entities")
 
+	language.Add("tool.multi_parent.removeconstraints", "Remove constraints before parenting")
+	language.Add("tool.multi_parent.nocollide", "No collide")
+	language.Add("tool.multi_parent.weld", "Weld")
+	language.Add("tool.multi_parent.disablecollisions", "Disable collisions")
+	language.Add("tool.multi_parent.weight", "Set weight")
+	language.Add("tool.multi_parent.disableshadows", "Disable shadows")
+
+	language.Add("tool.multi_parent.removeconstraints.help", "This can't be undone!")
+	language.Add("tool.multi_parent.nocollide.help", "You will need to area-copy your contraption to duplicate.")
+	language.Add("tool.multi_parent.weld.help", "This will retain the physics on parented props and you will be able to physgun them, but it will cause more lag.")
+	language.Add("tool.multi_parent.weight.help", "Sets the entity's mass to 0.1 before parenting.")
+
 	language.Add("tool.multi_parent.left_use","Primary + Use: Select entities in an area")
 	language.Add("tool.multi_parent.left1","Primary + Sprint: Select all entities connected to the entity (the whole contraption)")
 
@@ -306,7 +318,7 @@ end
 
 if CLIENT then
 	function TOOL.BuildCPanel(obj_Panel)
-		obj_Panel:AddControl("Slider",{
+		obj_Panel:AddControl("Slider", {
 			Label = "Auto Select Radius:",
 			Type = "integer",
 			Min = "64",
@@ -314,34 +326,38 @@ if CLIENT then
 			Command = "multi_parent_radius"
 		})
 
-		obj_Panel:AddControl("Checkbox",{
-			Label = "Remove all constraints before parenting",
-			Command = "multi_parent_RemoveConstraints"
+		obj_Panel:AddControl("Checkbox", {
+			Label = "#tool.multi_parent.removeconstraints",
+			Command = "multi_parent_removeconstraints",
+			Help = true
 		})
 
-		obj_Panel:AddControl("Checkbox",{
-			Label = "No Collide",
-			Command = "multi_parent_NoCollide"
+		obj_Panel:AddControl("Checkbox", {
+			Label = "#tool.multi_parent.nocollide",
+			Command = "multi_parent_nocollide",
+			Help = true
 		})
 
-		obj_Panel:AddControl("Checkbox",{
-			Label = "Weld",
-			Command = "multi_parent_Weld"
+		obj_Panel:AddControl("Checkbox", {
+			Label = "#tool.multi_parent.weld",
+			Command = "multi_parent_weld",
+			Help = true
 		})
 
-		obj_Panel:AddControl("Checkbox",{
-			Label = "Disable Collisions",
-			Command = "multi_parent_DisableCollisions"
+		obj_Panel:AddControl("Checkbox", {
+			Label = "#tool.multi_parent.weight",
+			Command = "multi_parent_weight",
+			Help = true
 		})
 
-		obj_Panel:AddControl("Checkbox",{
-			Label = "Set weight",
-			Command = "multi_parent_Weight"
+		obj_Panel:AddControl("Checkbox", {
+			Label = "#tool.multi_parent.disablecollisions",
+			Command = "multi_parent_disablecollisions",
 		})
 
-		obj_Panel:AddControl("Checkbox",{
-			Label = "Disable Shadows",
-			Command = "multi_parent_DisableShadows"
+		obj_Panel:AddControl("Checkbox", {
+			Label = "#tool.multi_parent.disableshadows",
+			Command = "multi_parent_disableshadows"
 		})
 	end
 end
