@@ -39,7 +39,7 @@ TOOL.ClientConVar["disablecollisions"] = "0"
 TOOL.ClientConVar["weld"] = "0"
 TOOL.ClientConVar["weight"] = "0"
 TOOL.ClientConVar["radius"] = "512"
-TOOL.ClientConVar["disableshadow"] = "0"
+TOOL.ClientConVar["disableshadows"] = "0"
 
 TOOL.SelectedEntities = {}
 TOOL.SelectedCount = 0
@@ -239,7 +239,7 @@ function TOOL:RightClick(trace)
 	end
 
 	undo.AddFunction(function(_, undoTbl)
-		for k,v in pairs(undoTbl) do
+		for k, v in pairs(undoTbl) do
 			if IsValid(k) then
 				local obj_Phys = k:GetPhysicsObject()
 
@@ -316,32 +316,32 @@ if CLIENT then
 
 		obj_Panel:AddControl("Checkbox",{
 			Label = "Remove all constraints before parenting",
-			Command = "multi_parentbRemoveConstraints"
+			Command = "multi_parent_RemoveConstraints"
 		})
 
 		obj_Panel:AddControl("Checkbox",{
 			Label = "No Collide",
-			Command = "multi_parentbNoCollide"
+			Command = "multi_parent_NoCollide"
 		})
 
 		obj_Panel:AddControl("Checkbox",{
 			Label = "Weld",
-			Command = "multi_parentbWeld"
+			Command = "multi_parent_Weld"
 		})
 
 		obj_Panel:AddControl("Checkbox",{
 			Label = "Disable Collisions",
-			Command = "multi_parentbDisableCollisions"
+			Command = "multi_parent_DisableCollisions"
 		})
 
 		obj_Panel:AddControl("Checkbox",{
 			Label = "Set weight",
-			Command = "multi_parentbWeight"
+			Command = "multi_parent_Weight"
 		})
 
 		obj_Panel:AddControl("Checkbox",{
 			Label = "Disable Shadows",
-			Command = "multi_parentbDisableShadows"
+			Command = "multi_parent_DisableShadows"
 		})
 	end
 end
