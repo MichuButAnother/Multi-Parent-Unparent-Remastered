@@ -126,41 +126,43 @@ end
 if SERVER then
 	util.AddNetworkString(sTag)
 
-	local t_MetaEntity = FindMetaTable("Entity")
+	local entMeta = FindMetaTable("Entity")
 
-	local f_GetOwner = function(ent)
-		if t_MetaEntity.CPPIGetOwner then -- CPPI - ( FPP / SPP / MMM / sv_props / gProctect (lul) / And many more that I'm not going to list. IT'S THE STANDARD FFS. )
+	local getOwner = function(ent)
+		-- CPPI is a standard at this point, most (if not all) prop protection addons support it by now
+		if entMeta.CPPIGetOwner then
 			return ent:CPPIGetOwner()
 		end
-
-		return ent:GetOwner() -- Used by some other things such as wiremod, HL2 related stuff, etc.. Not very reliable but w/e
+	
+		-- Used by some other things such as wiremod, HL2 related stuff, etc.. Not very reliable but w/e
+		return ent:GetOwner()
 	end
 
-	net.Receive(sTag, function(_,ePly)
+	net.Receive(sTag, function(_, ply)
 		local ent = net.ReadEntity()
 
-		if not IsValid(ent) or ent:IsPlayer() or ent:IsWorld() or not f_GetOwner(ent) then return end -- Never trust the client, yo! ( AND This bypasses protection checks! )
+		if not IsValid(ent) or ent:IsPlayer() or ent:IsWorld() or not getOwner(ent) then return end -- Never trust the client, yo! ( AND This bypasses protection checks! )
 
-		if tUniqueToPlayer[ePly].SelectedEntities[ent] then -- Deselect
-			if not tUniqueToPlayer[ePly].SelectedEntities[ent] then return end
+		if tUniqueToPlayer[ply].SelectedEntities[ent] then -- Deselect
+			if not tUniqueToPlayer[ply].SelectedEntities[ent] then return end
 
-			ent:SetColor(tUniqueToPlayer[ePly].OldEntityColors[ent])
+			ent:SetColor(tUniqueToPlayer[ply].OldEntityColors[ent])
 
-			tUniqueToPlayer[ePly].SelectedCount = tUniqueToPlayer[ePly].SelectedCount - 1
+			tUniqueToPlayer[ply].SelectedCount = tUniqueToPlayer[ply].SelectedCount - 1
 
-			tUniqueToPlayer[ePly].OldEntityColors[ent] = nil
-			tUniqueToPlayer[ePly].SelectedEntities[ent] = nil
+			tUniqueToPlayer[ply].OldEntityColors[ent] = nil
+			tUniqueToPlayer[ply].SelectedEntities[ent] = nil
 
 			return
 		end
 
-		tUniqueToPlayer[ePly].SelectedEntities[ent] = true
+		tUniqueToPlayer[ply].SelectedEntities[ent] = true
 
-		tUniqueToPlayer[ePly].SelectedCount = tUniqueToPlayer[ePly].SelectedCount + 1
+		tUniqueToPlayer[ply].SelectedCount = tUniqueToPlayer[ply].SelectedCount + 1
 
 		local cOldColor = ent:GetColor()
 
-		tUniqueToPlayer[ePly].OldEntityColors[ent] = cOldColor
+		tUniqueToPlayer[ply].OldEntityColors[ent] = cOldColor
 
 		ent:SetColor(Color(255,0,0,100))
 		ent:SetRenderMode(RENDERMODE_TRANSALPHA)

@@ -173,7 +173,7 @@ function TOOL:RightClick(trace)
 	local bWeight = 			tobool(self:GetClientNumber("weight"))
 	local bDisableShadows = 	tobool(self:GetClientNumber("disableshadow"))
 
-	local tUndo = {}
+	local undoTbl = {}
 
 	undo.Create("Multi-Parent")
 
@@ -226,7 +226,7 @@ function TOOL:RightClick(trace)
 
 				self.SelectedEntities[ent2] = nil
 
-				tUndo[ent2] = tData
+				undoTbl[ent2] = tData
 			end
 		else
 			if IsValid(ent2) then
@@ -238,8 +238,8 @@ function TOOL:RightClick(trace)
 		end
 	end
 
-	undo.AddFunction(function(_, tUndo)
-		for k,v in pairs(tUndo) do
+	undo.AddFunction(function(_, undoTbl)
+		for k,v in pairs(undoTbl) do
 			if IsValid(k) then
 				local obj_Phys = k:GetPhysicsObject()
 
@@ -266,7 +266,7 @@ function TOOL:RightClick(trace)
 				end
 			end
 		end
-	end, tUndo)
+	end, undoTbl)
 
 	undo.SetPlayer(self:GetOwner())
 	undo.Finish()
