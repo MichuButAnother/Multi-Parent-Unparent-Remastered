@@ -1,23 +1,12 @@
 TOOL.Category = "Constraints"
 TOOL.Name = "Multi-Unparent"
 
-local sTag = "mmm_tool_unparent"
-local tUniqueToPlayer = {}
-
 if CLIENT then
 	language.Add("tool.multi_unparent.name","Multi-Unparent (Remastered)")
 	language.Add("tool.multi_unparent.desc","Unparent multiple entities")
 	language.Add("tool.multi_unparent.left","Primary: Add an entity to the selection")
 	language.Add("tool.multi_unparent.right","Secondary: Unparent all selected entities")
 	language.Add("tool.multi_unparent.reload","Reload: Clear selected entities")
-
-	MMM__TOOL__PARENT__UNPARENT__INIT = function() -- We have to do something really stupid here because of how tools function..
-		tUniqueToPlayer[LocalPlayer()] = {
-			SelectedEntities = {},
-			SelectedCount = 0,
-			OldEntityColors = {}
-		}
-	end
 end
 
 TOOL.Information = {
@@ -32,67 +21,84 @@ TOOL.Information = {
 	}
 }
 
-function TOOL:Deploy() -- Sometimes is called on client, sometimes is not. To fix this unreliable mess we simply do some hacky stuff!
-	local owner = self:GetOwner()
+TOOL.SelectedEntities = {}
+TOOL.SelectedCount = 0
+TOOL.OldEntityColors = {}
 
-	tUniqueToPlayer[owner] = {
-		SelectedEntities = {},
-		SelectedCount = 0,
-		OldEntityColors = {}
-	}
+local entMeta = FindMetaTable("Entity")
 
-	if SERVER then
-		owner:SendLua("MMM__TOOL__PARENT__UNPARENT__INIT()") -- Yes. Really.
-	end
+-- Unused, just ported it if I need to use it later
+local getOwner = function(ent)
+	if entMeta.CPPIGetOwner then return ent:CPPIGetOwner() end
+
+	return ent:GetOwner()
 end
 
-function TOOL:Holster()
-	self:Reload()
+-- Also unused, maybe will be used
+local selection_blacklist = {
+	["player"] = true,
+	["predicted_viewmodel"] = true, -- Some of these may not be needed, whatever. (idk what does this mean but whatever, i'll just let it sit here)
+	["gmod_tool"] = true,
+	["none"] = true
+}
 
-	return true
+function TOOL:SelectEntity(ent)
+	if self.SelectedEntities[ent] then return end
+
+	self.SelectedEntities[ent] = true
+
+	self.SelectedCount = self.SelectedCount + 1
+
+	local cOldColor = ent:GetColor()
+
+	self.OldEntityColors[ent] = cOldColor
+
+	ent:SetColor(Color(255,0,0,100))
+	ent:SetRenderMode(RENDERMODE_TRANSALPHA)
+end
+
+function TOOL:DeselectEntity(ent)
+	if not self.SelectedEntities[ent] then return end
+
+	ent:SetColor(self.OldEntityColors[ent])
+
+	self.SelectedCount = self.SelectedCount - 1
+
+	self.OldEntityColors[ent] = nil
+	self.SelectedEntities[ent] = nil
 end
 
 function TOOL:LeftClick(trace)
+	if CLIENT then return true end
 	local ent = trace.Entity
-	if not IsValid(ent) or ent:IsPlayer() or ent:IsWorld() then return false end
 
-	if CLIENT then
-		local owner = self:GetOwner()
+	if not IsValid(ent) or ent:IsPlayer() or ent:IsWorld() or not util.IsValidPhysicsObject(ent, trace.PhysicsBone) then return false end
 
-		net.Start(sTag)
-			net.WriteEntity(owner:GetEyeTrace().Entity)
-		net.SendToServer()
-
-		if not tUniqueToPlayer[owner].SelectedEntities[ent] then
-			tUniqueToPlayer[self:GetOwner()].SelectedEntities[ent] = true
-		else
-			tUniqueToPlayer[self:GetOwner()].SelectedEntities[ent] = nil
-		end
-
-		return true
+	if self.SelectedEntities[ent] then
+		self:DeselectEntity(ent)
+	else
+		self:SelectEntity(ent)
 	end
 
 	return true
 end
 
-function TOOL:RightClick(tTrace)
+function TOOL:RightClick(trace)
 	if CLIENT then return true end
-
 	local owner = self:GetOwner()
 
-	if tUniqueToPlayer[owner].SelectedCount <= 0 then return false end
+	if self.SelectedCount <= 0 then return false end
 
 	local count = 0
 
-	for ent in pairs(tUniqueToPlayer[owner].SelectedEntities) do -- Unparent!
-		if not IsValid(ent) then continue end
+	for ent2 in pairs(self.SelectedEntities) do -- Unparent!
+		if not IsValid(ent2) then continue end
 
-		ent:SetParent()
+		ent2:SetParent()
+		self:DeselectEntity(ent2)
 
 		count = count + 1
 	end
-
-	self:Reload()
 
 	if count ~= 1 then
 		owner:PrintMessage(HUD_PRINTTALK,"Multi-Parent: " .. count .. " entities were unparented.")
@@ -100,71 +106,35 @@ function TOOL:RightClick(tTrace)
 		owner:PrintMessage(HUD_PRINTTALK,"Multi-Parent: One entity was unparented.")
 	end
 
+	self.SelectedEntities = {}
+	self.OldEntityColors = {}
+
 	return true
 end
 
 function TOOL:Reload()
 	if CLIENT then return true end
+	if self.SelectedCount <= 0 then return end
 
-	local owner = self:GetOwner()
+	for ent in pairs(self.SelectedEntities) do
+		if not IsValid(ent) then continue end
 
-	if tUniqueToPlayer[owner].SelectedCount <= 0 then return end
-
-	for Key in pairs(tUniqueToPlayer[owner].SelectedEntities) do
-		if not IsValid(Key) then continue end
-
-		Key:SetColor(tUniqueToPlayer[owner].OldEntityColors[Key])
+		ent:SetColor(self.OldEntityColors[Key])
 	end
 
-	tUniqueToPlayer[owner].SelectedCount = 0
-	tUniqueToPlayer[owner].SelectedEntities = {}
-	tUniqueToPlayer[owner].OldEntityColors = {}
+	self.SelectedCount = 0
+	self.SelectedEntities = {}
+	self.OldEntityColors = {}
 
 	return true
 end
 
-if SERVER then
-	util.AddNetworkString(sTag)
-
-	local entMeta = FindMetaTable("Entity")
-
-	local getOwner = function(ent)
-		-- CPPI is a standard at this point, most (if not all) prop protection addons support it by now
-		if entMeta.CPPIGetOwner then
-			return ent:CPPIGetOwner()
-		end
-	
-		-- Used by some other things such as wiremod, HL2 related stuff, etc.. Not very reliable but w/e
-		return ent:GetOwner()
+function TOOL:Think()
+	for ent in pairs(self.SelectedEntities) do
+		if not IsValid(ent) then self.SelectedEntities[ent] = nil end
 	end
 
-	net.Receive(sTag, function(_, ply)
-		local ent = net.ReadEntity()
-
-		if not IsValid(ent) or ent:IsPlayer() or ent:IsWorld() or not getOwner(ent) then return end -- Never trust the client, yo! ( AND This bypasses protection checks! )
-
-		if tUniqueToPlayer[ply].SelectedEntities[ent] then -- Deselect
-			if not tUniqueToPlayer[ply].SelectedEntities[ent] then return end
-
-			ent:SetColor(tUniqueToPlayer[ply].OldEntityColors[ent])
-
-			tUniqueToPlayer[ply].SelectedCount = tUniqueToPlayer[ply].SelectedCount - 1
-
-			tUniqueToPlayer[ply].OldEntityColors[ent] = nil
-			tUniqueToPlayer[ply].SelectedEntities[ent] = nil
-
-			return
-		end
-
-		tUniqueToPlayer[ply].SelectedEntities[ent] = true
-
-		tUniqueToPlayer[ply].SelectedCount = tUniqueToPlayer[ply].SelectedCount + 1
-
-		local cOldColor = ent:GetColor()
-
-		tUniqueToPlayer[ply].OldEntityColors[ent] = cOldColor
-
-		ent:SetColor(Color(255,0,0,100))
-		ent:SetRenderMode(RENDERMODE_TRANSALPHA)
-	end)
+	for ent in pairs(self.OldEntityColors) do
+		if not IsValid(ent) then self.OldEntityColors[ent] = nil end
+	end
 end
